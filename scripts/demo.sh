@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Demo flow for the video: a real model judges the sample project, then PreJudge judges itself.
 set -euo pipefail
-CONFIG="${OPENMINION_CONFIG:-$HOME/.openminion/agents.json}"
+if [ -n "${OPENMINION_CONFIG:-}" ]; then CONFIG="$OPENMINION_CONFIG"
+elif [ -f ".openminion/agents.json" ]; then CONFIG="$(pwd)/.openminion/agents.json"
+else CONFIG="$HOME/.openminion/agents.json"; fi
+echo "Using OpenMinion config: $CONFIG"
 LANG_ARG="${PREJUDGE_LANG:-en}"
 TMP="$(mktemp -d)"
 cp -r examples/sample-project "$TMP/sample-project"
