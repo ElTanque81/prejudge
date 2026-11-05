@@ -1,0 +1,23 @@
+Cortensor Hackathon #5
+
+How to Participate
+Submit a PR. Link your public project.
+
+Submission Checklist
+
+Your PR should include:
+
+A public source repository and README with setup and run instructions.
+A short explanation of the OpenMinion SDK workflow.
+One working example and a 1–5 minute demo video.
+A Building Blocks Tested note: what you used, what worked, and what did not.
+A What We Learned note with actionable product feedback.
+
+For a bug, include the steps to reproduce it, expected and actual behavior, and safe evidence such as a screenshot or request ID. Share security-sensitive findings privately with the hackathon team.
+
+Evaluation
+Working functionality and useful outcome: 25%
+Meaningful OpenMinion SDK usage: 20%
+Reproducibility and demo quality: 20%
+Building-block findings and improvement feedback: 25%
+Relevance to Cortensor builder workflows: 10%
