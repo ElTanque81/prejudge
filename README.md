@@ -28,8 +28,10 @@ run after every change (and in CI with `--fail-under`).
 ```
 rules.md ──► parse rubric + checklist (deterministic, weights from the organizer)
                 │
-project/ ──►  [1] Judge agent ── tools: submission_scan (forced first), repo_tree, read_file, search_repo
+project/ ──►  [1] Judge agent ── scan + file list + key files inlined; tools for drill-down:
+                │      repo_tree, read_file, search_repo, submission_scan
                 │      output_type=Scorecard (Pydantic), one durable session per project
+                │      loop abort → tool-free fallback judge from the inlined files
                 ▼
               Evidence gate ── every quote is checked against the file; a score > 5 without
                 │               a verifiable quote is capped at 5
@@ -103,7 +105,7 @@ web page both work). See `prejudge/rules_library/cortensor-hackathon-5.md`.
 | Building block | Where |
 |---|---|
 | `Agent` + `@tool` with `min_scope="READ_ONLY"` | `prejudge/repo_tools.py` – four read tools bound to one project folder; paths cannot escape it |
-| `forced_tools` | judge must call `submission_scan` first, so every score starts from the same facts |
+| Deterministic context | scan, file list, README and checklist docs are inlined, so small local models score from real text instead of guessing |
 | `output_type` (Pydantic) + `AgentOutputValidationError` | `Scorecard`, `SkepticReview`; one repair turn in the same session on invalid JSON |
 | Sessions | one durable `session_id` per project + rules (`prejudge-<name>-<hash>`), reused on every run |
 | Delegation: `subagent()` | skeptic reviewer with its own instructions, output type and timeout |

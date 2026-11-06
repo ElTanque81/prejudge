@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prejudge"
-version = "0.1.1"
+version = "0.1.2"
 description = "Hackathon pre-judge agent built on the OpenMinion 0.1 Python SDK"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
-dependencies = ["openminion>=0.1.18,<0.2", "pydantic>=2"]
+dependencies = ["openminion>=0.1.28,<0.2", "pydantic>=2"]
 
 [project.optional-dependencies]
 test = ["pytest>=8"]

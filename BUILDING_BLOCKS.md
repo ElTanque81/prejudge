@@ -9,7 +9,7 @@ runtime sends to the provider. Real-model runs: see the table at the end (to be 
 |---|---|---|
 | `Agent` + `@tool` | 4 read tools + 1 write tool bound to a project folder via closures | ✅ works. Tools created inside a factory function register and unregister cleanly per run. |
 | Tool risk / permissions | read tools `min_scope="READ_ONLY"`, write tool default scope | ⚠️ works once declared. The **default** `@tool` (no `min_scope`) is classified `write` / unknown reversibility and every call stops at "Policy confirmation required" – also for pure lookups. Known upstream as #464. |
-| `forced_tools` | `submission_scan` must run first | ✅ honored (`tool_choice` forces the function on step 1). |
+| `forced_tools` | `submission_scan` must run first (v0.1.0) | ⚠️ advisory only: requests go out with `tool_choice: "auto"`, so nothing forces the call at API level. Dropped in v0.1.2; the scan result is now inlined. |
 | `output_type` (Pydantic) | `Scorecard`, `SkepticReview` | ⚠️ validation works and recovers JSON wrapped in prose / the `openminion: ` prefix (#567). But the **schema is never sent to the model** – see finding B. |
 | `AgentOutputValidationError` | one repair turn in the same session with the invalid text | ✅ `raw_text` is available and useful for repair. |
 | `instructions=` | judge / skeptic / fixer roles | ❌ **dropped after the first tool call** – continuation steps carry neither the system prompt nor the text anywhere else. See finding A. |
@@ -48,6 +48,15 @@ status line `openminion: [act] Repeated tool pattern did not produce a final ans
 model formatting error, and a repair turn is wasted. Response in PreJudge: detect the notice, skip the repair,
 re-run the judge as a tool-free agent from the inlined files (`judge (fallback, no tools)` in the report).
 Suggestion: raise a typed `AgentLoopAbortedError` or set `run_state`.
+
+**F. The freshness classifier cannot be turned off and misfires on non-news tasks.**
+Every turn runs an LLM freshness classification (`bootstrap/freshness_classify.py`). With qwen2.5 it
+classified a code-review request as a *current finance* question (the rules text mentioned prize money,
+$COR and staking) and the runtime replied "couldn't provide a grounded current finance answer ... missing
+live-data evidence" instead of running the turn. There is no config or SDK switch to skip it for offline
+agents. Response in PreJudge: rules prose is no longer sent, only rubric + checklist, plus an explicit
+"offline review, no live data" line. Suggestion: `Agent(freshness="off")` or skip classification when no
+web/live tools are registered.
 
 **D. Default `@tool` needs confirmation (known, #464).** README quick start `lookup_order` has the same shape.
 

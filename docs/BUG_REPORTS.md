@@ -81,6 +81,25 @@ react (fall back, lower tool budget) instead of treating it as a formatting erro
 
 ---
 
+## F
+
+**Title:** [0.1.18] No way to disable freshness classification; offline code review classified as "current finance" and refused
+
+**Observed:** Ollama `qwen2.5`, `Agent(output_type=...)`, no web tools registered. User message contained
+hackathon prize text ($COR, staking). Reply: "I couldn't provide a grounded current finance answer because
+Missing live-data evidence for a freshness-sensitive answer.; Missing exact-date evidence ...".
+
+**Expected:** an SDK/config switch, or automatic skip when the agent has no live-data tools.
+
+## G
+
+**Title:** [0.1.18] `forced_tools` does not set `tool_choice`; requests go out with `"auto"`
+
+Docs suggest the listed tools are forced; the provider request carries `tool_choice: "auto"`, so models
+may skip them. If it is meant as a prompt hint, the name and docs should say so.
+
+---
+
 ## C (context for #635 / #497 / #516)
 
 One judge turn with two tool calls produced 8 provider requests; only 3–4 were the agent loop. The rest

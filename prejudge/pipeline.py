@@ -1,7 +1,7 @@
 """The PreJudge workflow: judge -> evidence gate -> skeptic subagent -> (optional) approved fixes.
 
 OpenMinion building blocks used here:
-  * Agent + @tool (workspace-confined read tools, forced first tool call)
+  * Agent + @tool (workspace-confined read tools for drill-down; key context inlined)
   * output_type (Pydantic-validated Scorecard / SkepticReview)
   * sessions (one durable session per project + rules, reused across runs)
   * subagent() delegation (bounded skeptic reviewer with its own timeout)
@@ -31,7 +31,10 @@ LANG_NAME = {"de": "German", "en": "English"}
 JUDGE_INSTRUCTIONS = """You are PreJudge, a strict but fair hackathon judge.
 You score ONE project against the organizer's rubric before the team submits.
 Rules:
-- Inspect the project with the tools first (submission_scan, repo_tree, read_file, search_repo).
+- This is an offline review of local files. No live, current or market data is needed.
+- The deterministic scan, the file list and the key files are already in the request. Use read_file or
+  search_repo only for a file that is not inlined: at most 3 tool calls, never the same call twice,
+  then answer.
 - Score every rubric criterion 0-10. Use the EXACT criterion names you are given.
 - Every score above 5 needs evidence: a repo-relative path plus a short verbatim quote (one line) from that file.
   Copy the text only, WITHOUT the "12: " line number that read_file shows. Quotes are machine-verified;
@@ -125,10 +128,11 @@ def _judge_prompt(rules: Rules, previous: dict | None, language: str, ws: Worksp
         )
     body = (
         f"Hackathon: {rules.title}\n\nRubric (use these exact names):\n{rubric}\n\n"
-        f"Submission checklist:\n{checklist}\n{prev}\n"
-        "Organizer rules text (excerpt):\n" + rules.raw[:4000]
+        f"Submission checklist:\n{checklist}\n{prev}"
     )
     if ws is not None:
+        scan = {k: v for k, v in ws.scan().items() if k != "markdown_headings"}
+        body += "\n\nDeterministic scan (already done, do not re-run):\n" + json.dumps(scan, indent=1)
         tree = "\n".join(ws.rel(p) for p in ws.files()[:120])
         body += (
             "\n\nProject files (only these exist; never cite any other path):\n" + tree
@@ -255,7 +259,6 @@ def run(
         agent_id=agent_id,
         instructions=JUDGE_INSTRUCTIONS.format(lang=language),
         tools=make_read_tools(ws),
-        forced_tools=["submission_scan"],
         output_type=Scorecard,
         session_id=sid,
     ) as judge:
