@@ -217,6 +217,9 @@ def make_write_tool(ws: Workspace, written: list[str]) -> list:
             return "refused: only .md or .txt files may be created"
         if p.exists():
             return f"refused: {path} already exists"
+        if "\n" not in content and "\\n" in content:
+            # Some models (seen with qwen2.5 via Ollama) double-escape newlines in tool arguments.
+            content = content.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", "\t")
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(content.rstrip() + "\n", encoding="utf-8")
         written.append(ws.rel(p))

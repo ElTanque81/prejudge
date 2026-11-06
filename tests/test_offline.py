@@ -87,6 +87,15 @@ def test_context_pack_inlines_readme(project):
     assert pack.startswith("=== README.md ===") and "python agent.py" in pack
 
 
+def test_create_doc_unescapes_double_escaped_newlines(project):
+    from prejudge.repo_tools import make_write_tool
+    written: list[str] = []
+    fn = make_write_tool(Workspace(project), written)[0]
+    fn = getattr(fn, "__wrapped__", fn)
+    fn(path="/NOTES.md", content="# Title\\n\\n## Used")
+    assert (project / "NOTES.md").read_text() == "# Title\n\n## Used\n"
+
+
 def test_skeptic_meets_halfway_rounding_toward_skeptic():
     card = Scorecard(project_summary="x", criteria=[CriterionScore(criterion="A", score=7), CriterionScore(criterion="B", score=3)])
     review = SkepticReview(verdict="too_generous", challenges=[
