@@ -100,6 +100,22 @@ may skip them. If it is meant as a prompt hint, the name and docs should say so.
 
 ---
 
+## H
+
+**Title:** [0.1.18] Ollama adapter does not set `num_ctx`; agent prompts beyond Ollama's default window are truncated from the start
+
+**Where:** `modules/llm/providers/ollama/adapter.py` builds `payload["options"]` with temperature,
+top_p, num_predict, stop. No `num_ctx`, no config field for it.
+
+**Effect:** with Ollama's default window (4096 in current releases) the system prompt and tool contract
+fall off the front of multi-step turns. qwen2.5:14b then answered with echoed tool output and with
+OpenMinion's internal routing rules instead of the requested JSON.
+
+**Expected:** `num_ctx` configurable per provider/model (and ideally a warning when the prompt estimate
+exceeds it). Workaround: `OLLAMA_CONTEXT_LENGTH=12288` on the Ollama server.
+
+---
+
 ## C (context for #635 / #497 / #516)
 
 One judge turn with two tool calls produced 8 provider requests; only 3–4 were the agent loop. The rest

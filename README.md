@@ -62,6 +62,19 @@ openminion setup --no-chat          # choose e.g. cortensor-portal, groq, openai
 openminion doctor --check-turn      # one real test turn
 ```
 
+Using **Ollama** (local): OpenMinion does not pass a context size to Ollama, and Ollama's default window
+(4096 tokens) is too small for agent turns. Raise it before running PreJudge, otherwise prompts are cut
+off silently:
+
+```bash
+# macOS app: set it, then quit Ollama from the menu bar and open it again
+launchctl setenv OLLAMA_CONTEXT_LENGTH 12288
+# or when running the server yourself
+OLLAMA_CONTEXT_LENGTH=12288 ollama serve
+```
+
+Tested with `qwen2.5:14b` on a 16 GB Mac mini.
+
 Using **Cortensor Portal**: pick `cortensor-portal` in the wizard (credential `CORTENSOR_API_KEY`,
 endpoint `https://api.cortensor.app/v1`, recommended model `oss-20b`). Portal is slower than most hosted
 providers, so pass `--timeout 900`.

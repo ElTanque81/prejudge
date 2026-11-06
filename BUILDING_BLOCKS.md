@@ -58,6 +58,16 @@ agents. Response in PreJudge: rules prose is no longer sent, only rubric + check
 "offline review, no live data" line. Suggestion: `Agent(freshness="off")` or skip classification when no
 web/live tools are registered.
 
+**H. The Ollama adapter never sets `num_ctx`, so long agent prompts are silently truncated.**
+`modules/llm/providers/ollama/adapter.py` sends `options` with temperature, top_p, num_predict and stop
+only. Ollama then uses its default context window (typically 4096 tokens) and drops the *start* of longer
+prompts, which is where OpenMinion puts the system prompt and tool contract. Symptoms seen with
+qwen2.5:14b: the model echoed tool output or OpenMinion's own internal rules
+(`entry_no_routing_metadata_rule ...`) as its answer, and gave 0/10 to criteria it had evidence for.
+The runtime's own prompt is ~2.5k tokens before any user content, so almost any real task overflows.
+Workaround: start Ollama with `OLLAMA_CONTEXT_LENGTH=12288` (or larger). Suggestion: expose
+`num_ctx` in the provider config and warn when the estimated prompt exceeds it.
+
 **D. Default `@tool` needs confirmation (known, #464).** README quick start `lookup_order` has the same shape.
 
 ## Real-model runs
