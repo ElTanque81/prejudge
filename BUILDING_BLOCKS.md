@@ -55,7 +55,7 @@ Mac mini, Ollama, `llama3.1` (8B), PreJudge v0.1.0 judging its own repo (before 
 
 **Evidence gate on a real model:** 5 of 5 cited quotes were invented, 3 of them from files that do not
 exist (`openminion_sdk_usage.py`, `demo_video.mp4`, `building_blocks_tested.txt`). All were caught and
-capped; without the gate the self-score would have been inflated by ~11 points.
+capped; without the gate the self-score would have been inflated by 8.5 points (6→5 at 25 %, 8→5 at 20 %).
 Response in v0.1.1: the judge prompt now carries the real file list and the README plus checklist docs
 inline (`Workspace.context_pack`), and the report labels citations of non-existent files separately.
 
