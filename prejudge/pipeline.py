@@ -194,17 +194,34 @@ def apply_skeptic(scorecard: Scorecard, review: SkepticReview) -> tuple[Scorecar
     return scorecard.model_copy(update={"criteria": new}), adjustments
 
 
+def _is_runtime_notice(text: str | None) -> bool:
+    """OpenMinion reports loop aborts (e.g. "[act] repeated tool pattern") as plain reply text."""
+    t = (text or "").strip().lower()
+    return t.startswith("openminion: [") or "repeated tool pattern" in t
+
+
+class StageFailed(RuntimeError):
+    pass
+
+
 def _run_typed(agent: Agent, prompt: str, stage: str, stages: list[StageStats], **kw):
     t0 = time.monotonic()
     try:
         res = agent.run(prompt, **kw)
     except AgentOutputValidationError as exc:
+        if _is_runtime_notice(exc.raw_text):
+            stages.append(StageStats(stage + " (runtime abort)", round(time.monotonic() - t0, 1), {}))
+            raise StageFailed((exc.raw_text or "")[:200]) from exc
         # One repair attempt in the same session: show the model its own invalid output.
-        res = agent.run(
-            "Your previous answer did not match the JSON schema. Return ONLY the corrected JSON object.\n"
-            f"Invalid answer:\n{(exc.raw_text or '')[:3000]}",
-            **kw,
-        )
+        try:
+            res = agent.run(
+                "Your previous answer did not match the JSON schema. Return ONLY the corrected JSON object.\n"
+                f"Invalid answer:\n{(exc.raw_text or '')[:3000]}",
+                **kw,
+            )
+        except AgentOutputValidationError as exc2:
+            stages.append(StageStats(stage + " (invalid twice)", round(time.monotonic() - t0, 1), {}))
+            raise StageFailed((exc2.raw_text or str(exc2))[:200]) from exc2
         stage += " (+repair)"
     stages.append(StageStats(stage, round(time.monotonic() - t0, 1), dict(res.stats)))
     return res
@@ -243,8 +260,30 @@ def run(
         session_id=sid,
     ) as judge:
         log(f"[1/3] judging {ws.root.name} against {len(rules.criteria)} rubric criteria (session {sid})")
-        res = _run_typed(judge, _judge_prompt(rules, previous, language, ws), "judge", stages, timeout_seconds=timeout)
-        card = _align(res.output, rules)
+        prompt = _judge_prompt(rules, previous, language, ws)
+        try:
+            res = _run_typed(judge, prompt, "judge", stages, timeout_seconds=timeout)
+            raw_card = res.output
+        except StageFailed as exc:
+            # Fallback: same contract, no tools. Everything the judge needs is already inlined.
+            log(f"  judge aborted ({str(exc)[:80]}); retrying without tools from the inlined files")
+            with Agent(
+                name="prejudge-answer-only",
+                config_path=config_path,
+                agent_id=agent_id,
+                instructions=JUDGE_INSTRUCTIONS.format(lang=language),
+                output_type=Scorecard,
+                session_id=sid + "-answer-only",
+            ) as plain:
+                res = _run_typed(
+                    plain,
+                    prompt + "\n\nNo tools are available in this turn. Score from the inlined files and file list only.",
+                    "judge (fallback, no tools)",
+                    stages,
+                    timeout_seconds=timeout,
+                )
+                raw_card = res.output
+        card = _align(raw_card, rules)
         card, verified, gate_adj = evidence_gate(ws, card)
         adjustments += gate_adj
 
@@ -269,8 +308,8 @@ def run(
                 skeptic_review = sres.output
                 card, sk_adj = apply_skeptic(card, skeptic_review)
                 adjustments += sk_adj
-            except AgentOutputValidationError as exc:
-                log(f"  skeptic output invalid twice, skipped: {str(exc)[:120]}")
+            except StageFailed as exc:
+                log(f"  skeptic skipped: {str(exc)[:120]}")
 
     if fix:
         log("[3/3] fixer drafts missing docs (each file needs your approval)")

@@ -70,6 +70,9 @@ def respond(body: dict) -> dict:
             return _tool_call("create_doc", {"path": "BUILDING_BLOCKS.md",
                                              "content": "# Building Blocks Tested\n\n- TODO: list blocks"})
         return {"role": "assistant", "content": "Created BUILDING_BLOCKS.md."}
+    if "You are PreJudge" in system and "LOOP_TRIGGER.md" in system and "read_file" in names:
+        # Simulates the runtime's circular-pattern abort text for the tool-using judge.
+        return {"role": "assistant", "content": "[act] Repeated tool pattern did not produce a final answer."}
     if "You are PreJudge" in system:
         done = len(tool_results)
         if done == 0 and "submission_scan" in names:

@@ -130,6 +130,40 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+def _mock_config(tmp_path, port):
+    home = tmp_path / "home"
+    home.mkdir(exist_ok=True)
+    subprocess.run(["openminion", "config", "init", "--provider", "openai"], cwd=home, check=True,
+                   capture_output=True, env={**__import__("os").environ, "OPENMINION_HOME": str(home)})
+    cfg = home / ".openminion/agents.json"
+    data = json.loads(cfg.read_text())
+    data["providers"]["openai"].update(base_url=f"http://127.0.0.1:{port}/v1", api_key="sk-mock")
+    cfg.write_text(json.dumps(data))
+    return cfg
+
+
+def test_runtime_notice_detection():
+    from prejudge.pipeline import _is_runtime_notice
+    assert _is_runtime_notice("openminion: [act] repeated tool pattern")
+    assert not _is_runtime_notice('{"project_summary": "x"}')
+
+
+@pytest.mark.skipif(shutil.which("openminion") is None, reason="openminion CLI not installed")
+def test_judge_falls_back_without_tools_after_loop_abort(project, tmp_path):
+    (project / "LOOP_TRIGGER.md").write_text("# loop\n")
+    port = _free_port()
+    server = subprocess.Popen([sys.executable, str(ROOT / "tests/mock_model.py"), str(port)])
+    try:
+        time.sleep(0.8)
+        cfg = _mock_config(tmp_path, port)
+        from prejudge.cli import main
+        assert main(["cortensor-hackathon-5", str(project), "--config", str(cfg), "--no-skeptic"]) == 0
+        report = (project / ".prejudge/PREJUDGE_REPORT.md").read_text()
+        assert "judge (runtime abort)" in report and "judge (fallback, no tools)" in report
+    finally:
+        server.terminate()
+
+
 @pytest.mark.skipif(shutil.which("openminion") is None, reason="openminion CLI not installed")
 def test_end_to_end_with_mock_model(project, tmp_path):
     """Real OpenMinion runtime, scripted model: tools, policy, sessions, subagent, approval."""

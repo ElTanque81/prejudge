@@ -75,6 +75,10 @@ def main(argv: list[str] | None = None) -> int:
     except ProviderError as exc:
         print(f"model provider failed: {exc.code}: {exc.message}\nRun `openminion doctor --check-turn` to check your provider.", file=sys.stderr)
         return 1
+    except pipeline.StageFailed as exc:
+        print(f"the model could not produce a valid scorecard, even without tools: {exc}\n"
+              "Try a stronger model (e.g. qwen2.5:14b or a hosted model).", file=sys.stderr)
+        return 1
     except TurnTimeoutError as exc:
         print(f"agent turn timed out: {exc}. Try --timeout 900 or a faster model.", file=sys.stderr)
         return 1

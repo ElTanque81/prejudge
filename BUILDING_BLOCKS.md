@@ -41,6 +41,14 @@ A judge turn with 2 tool calls made **8** provider requests: memory candidate ex
 `items`) and freshness classification (`submit_output` with `intent`) run around the agent loop. On a slow
 provider such as Cortensor Portal this multiplies latency. Related upstream: #635, #497, #516.
 
+**E. Loop aborts arrive as reply text, not as an error.**
+When the act loop detects a repeated tool pattern (seen with qwen2.5 via Ollama), `Agent.run` returns the
+status line `openminion: [act] Repeated tool pattern did not produce a final answer.` as the reply. With
+`output_type` set this surfaces as `AgentOutputValidationError` ("invalid JSON"), indistinguishable from a
+model formatting error, and a repair turn is wasted. Response in PreJudge: detect the notice, skip the repair,
+re-run the judge as a tool-free agent from the inlined files (`judge (fallback, no tools)` in the report).
+Suggestion: raise a typed `AgentLoopAbortedError` or set `run_state`.
+
 **D. Default `@tool` needs confirmation (known, #464).** README quick start `lookup_order` has the same shape.
 
 ## Real-model runs

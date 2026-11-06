@@ -64,6 +64,23 @@ turns on slow providers.
 
 ---
 
+## E
+
+**Title:** [0.1.18] Circular-pattern abort is returned as reply text; with `output_type` it becomes `AgentOutputValidationError`
+
+**Observed:** Ollama `qwen2.5`, tool-using `Agent(output_type=Scorecard)`. The act loop stops with
+`termination_reason=circular_pattern` (`modules/brain/loop/tools/engine.py`, `_handle_circular_pattern`)
+and the user receives `openminion: [act] Repeated tool pattern did not produce a final answer.` as the
+reply text. `_coerce_output` then raises `AgentOutputValidationError` (json_invalid).
+
+**Expected:** a distinguishable signal (typed exception or `AgentRunResult.run_state`) so callers can
+react (fall back, lower tool budget) instead of treating it as a formatting error.
+
+**Note:** an `Agent` constructed with no tools still exposes internal decision tools
+(`tool_request`, `respond`, `plan`, `research`, ...) to the model; worth documenting.
+
+---
+
 ## C (context for #635 / #497 / #516)
 
 One judge turn with two tool calls produced 8 provider requests; only 3–4 were the agent loop. The rest
