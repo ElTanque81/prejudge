@@ -82,6 +82,11 @@ def test_quote_verification_tolerates_copied_prefixes(project):
     assert not ws.verify_quote("README.md", "a")
 
 
+def test_context_pack_inlines_readme(project):
+    pack = Workspace(project).context_pack(["A Building Blocks Tested note"])
+    assert pack.startswith("=== README.md ===") and "python agent.py" in pack
+
+
 def test_skeptic_meets_halfway_rounding_toward_skeptic():
     card = Scorecard(project_summary="x", criteria=[CriterionScore(criterion="A", score=7), CriterionScore(criterion="B", score=3)])
     review = SkepticReview(verdict="too_generous", challenges=[

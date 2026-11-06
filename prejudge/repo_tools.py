@@ -96,6 +96,34 @@ class Workspace:
             "markdown_headings": headings[:80],
         }
 
+    def file_exists(self, rel: str) -> bool:
+        try:
+            return self.resolve(rel.split(":")[0]).is_file()
+        except PermissionError:
+            return False
+
+    def context_pack(self, checklist: list[str], budget: int = 7000) -> str:
+        """README + checklist-related markdown files, inlined so small models need not find them."""
+        words = {w for item in checklist for w in re.findall(r"[a-z]{5,}", item.lower())}
+        picked: list[Path] = []
+        mds = [p for p in self.text_files() if p.suffix.lower() == ".md"]
+        readme = next((p for p in mds if p.parent == self.root and p.name.lower().startswith("readme")), None)
+        if readme:
+            picked.append(readme)
+        for p in mds:
+            stem = re.sub(r"[^a-z]+", " ", p.stem.lower())
+            if p not in picked and any(w in stem for w in words):
+                picked.append(p)
+        out, left = [], budget
+        for p in picked:
+            body = self.read(p)
+            chunk = body[: max(0, min(len(body), left - 80))]
+            if not chunk:
+                break
+            out.append(f"=== {self.rel(p)} ===\n{chunk}" + ("\n[... truncated, use read_file for more]" if len(chunk) < len(body) else ""))
+            left -= len(chunk) + 80
+        return "\n\n".join(out)
+
     def verify_quote(self, rel: str, quote: str) -> bool:
         """True when the file exists and the quote appears in it.
 

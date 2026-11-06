@@ -43,10 +43,22 @@ provider such as Cortensor Portal this multiplies latency. Related upstream: #63
 
 **D. Default `@tool` needs confirmation (known, #464).** README quick start `lookup_order` has the same shape.
 
-## Real-model runs (fill in after the demo)
+## Real-model runs
 
-| Provider / model | Stage | Seconds | LLM calls | Valid JSON first try? | Notes |
+Mac mini, Ollama, `llama3.1` (8B), PreJudge v0.1.0 judging its own repo (before the context-pack change):
+
+| Provider / model | Stage | Seconds | LLM calls | Tokens in/out | Valid JSON first try? | Notes |
+|---|---|---|---|---|---|---|
+| Ollama llama3.1 8B | judge | 87.0 | 3 | 8067 / 1065 | yes | Called only the forced `submission_scan`, read no file, then answered. |
+| Ollama llama3.1 8B | skeptic | 61.7 | 3 | 8017 / 470 | yes | Valid `SkepticReview`. |
+| Ollama llama3.1 8B | fixer (sample project) | – | – | – | n/a | Proposed 5 docs through `create_doc`; approval prompt shown for each; 3 approved, 2 denied (a doc *about* a committed key, a separate video-link file). |
+
+**Evidence gate on a real model:** 5 of 5 cited quotes were invented, 3 of them from files that do not
+exist (`openminion_sdk_usage.py`, `demo_video.mp4`, `building_blocks_tested.txt`). All were caught and
+capped; without the gate the self-score would have been inflated by ~11 points.
+Response in v0.1.1: the judge prompt now carries the real file list and the README plus checklist docs
+inline (`Workspace.context_pack`), and the report labels citations of non-existent files separately.
+
+| Provider / model | Stage | Seconds | LLM calls | Tokens in/out | Notes |
 |---|---|---|---|---|---|
-| TODO | judge | | | | |
-| TODO | skeptic | | | | |
-| TODO | fixer | | | | |
+| TODO (re-run after v0.1.1) | judge | | | | |

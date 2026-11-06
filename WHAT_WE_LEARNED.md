@@ -23,6 +23,13 @@ Actionable feedback for OpenMinion and Cortensor, ordered by impact on a new bui
    preview-and-confirm CLI in a few lines. An `approval_callback` example in `examples/sdk/` (today it lives
    only in `submitted_stream.py` via `resolve_approval`) would help.
 
-6. **Builder workflow idea for Cortensor:** hackathon rules with explicit weights are machine-readable.
+6. **Small local models do not explore with tools on their own.** With Ollama `llama3.1` (8B) the judge
+   used only the forced first tool and then invented evidence, including file names. `forced_tools` worked
+   as documented, but there is no SDK way to require *at least N* tool steps or a specific follow-up tool.
+   For builders on small or slow models (Portal capacity is limited) the reliable pattern was: put the
+   essential context in the prompt, keep tools for drilling down, and verify every claim in code.
+   An SDK hook such as `min_tool_calls` or a per-step `forced_tools` sequence would help.
+
+7. **Builder workflow idea for Cortensor:** hackathon rules with explicit weights are machine-readable.
    PreJudge can run in CI on every PR to the submission repo and post the deterministic checks (README,
    video link, findings notes, committed secrets) before human review.

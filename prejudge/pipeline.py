@@ -88,6 +88,7 @@ class JudgeResult:
     created_files: list[str]
     stages: list[StageStats]
     session_id: str
+    existing: set[str] = field(default_factory=set)
 
 
 def session_id_for(ws: Workspace, rules: Rules) -> str:
@@ -112,7 +113,7 @@ def with_contract(role: str, model, body: str) -> str:
     return f"{role}\n\nReturn ONE JSON object matching this JSON schema:\n{_schema(model)}\n\n{body}"
 
 
-def _judge_prompt(rules: Rules, previous: dict | None, language: str) -> str:
+def _judge_prompt(rules: Rules, previous: dict | None, language: str, ws: Workspace | None = None) -> str:
     rubric = "\n".join(f"- {c.name} ({round(c.weight * 100)}%)" for c in rules.criteria)
     checklist = "\n".join(f"- {c}" for c in rules.checklist) or "- (none listed)"
     prev = ""
@@ -125,8 +126,15 @@ def _judge_prompt(rules: Rules, previous: dict | None, language: str) -> str:
     body = (
         f"Hackathon: {rules.title}\n\nRubric (use these exact names):\n{rubric}\n\n"
         f"Submission checklist:\n{checklist}\n{prev}\n"
-        "Organizer rules text (excerpt):\n" + rules.raw[:6000]
+        "Organizer rules text (excerpt):\n" + rules.raw[:4000]
     )
+    if ws is not None:
+        tree = "\n".join(ws.rel(p) for p in ws.files()[:120])
+        body += (
+            "\n\nProject files (only these exist; never cite any other path):\n" + tree
+            + "\n\nKey project files, inlined (quote from these or from read_file output):\n"
+            + ws.context_pack(rules.checklist)
+        )
     return with_contract(JUDGE_INSTRUCTIONS.format(lang=language), Scorecard, body)
 
 
@@ -158,7 +166,9 @@ def evidence_gate(ws: Workspace, scorecard: Scorecard) -> tuple[Scorecard, dict[
         flags = [ws.verify_quote(e.path, e.quote) for e in cs.evidence]
         verified[cs.criterion] = flags
         if cs.score > 5 and not any(flags):
-            adjustments.append(Adjustment(cs.criterion, cs.score, 5, "evidence gate: no verifiable quote"))
+            invented = [e.path for e in cs.evidence if not ws.file_exists(e.path)]
+            why = "evidence gate: cited file(s) do not exist: " + ", ".join(invented) if invented else "evidence gate: no verifiable quote"
+            adjustments.append(Adjustment(cs.criterion, cs.score, 5, why))
             cs = cs.model_copy(update={"score": 5})
         new.append(cs)
     return scorecard.model_copy(update={"criteria": new}), verified, adjustments
@@ -233,7 +243,7 @@ def run(
         session_id=sid,
     ) as judge:
         log(f"[1/3] judging {ws.root.name} against {len(rules.criteria)} rubric criteria (session {sid})")
-        res = _run_typed(judge, _judge_prompt(rules, previous, language), "judge", stages, timeout_seconds=timeout)
+        res = _run_typed(judge, _judge_prompt(rules, previous, language, ws), "judge", stages, timeout_seconds=timeout)
         card = _align(res.output, rules)
         card, verified, gate_adj = evidence_gate(ws, card)
         adjustments += gate_adj
@@ -285,4 +295,5 @@ def run(
     scores = {cs.criterion: cs.score for cs in card.criteria}
     total = weighted_total(rules, scores)
     history.append(ws.root, rules.title, total, scores, sid)
-    return JudgeResult(rules, card, total, previous, scan, verified, adjustments, skeptic_review, created, stages, sid)
+    existing = {e.path for cs in card.criteria for e in cs.evidence if ws.file_exists(e.path)}
+    return JudgeResult(rules, card, total, previous, scan, verified, adjustments, skeptic_review, created, stages, sid, existing)

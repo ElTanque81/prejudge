@@ -11,7 +11,7 @@ T = {
     "en": {
         "title": "PreJudge report", "total": "Weighted score", "prev": "previous run", "crit": "Criterion",
         "weight": "Weight", "score": "Score", "evidence": "Evidence", "gaps": "Gaps", "fixes": "Fixes",
-        "verified": "verified", "unverified": "NOT verified", "adj": "Score adjustments", "skeptic": "Skeptic verdict",
+        "verified": "verified", "unverified": "NOT verified", "missing": "file does not exist", "adj": "Score adjustments", "skeptic": "Skeptic verdict",
         "checks": "Deterministic checks", "risks": "Top risks", "created": "Files created (approved)",
         "diag": "Run diagnostics", "stage": "Stage", "secs": "Seconds", "calls": "LLM calls", "tokens": "Tokens in/out",
         "yes": "yes", "no": "no", "readme": "README", "setup": "Setup instructions", "runi": "Run instructions",
@@ -22,7 +22,7 @@ T = {
     "de": {
         "title": "PreJudge-Bericht", "total": "Gewichtete Punktzahl", "prev": "letzter Lauf", "crit": "Kriterium",
         "weight": "Gewicht", "score": "Punkte", "evidence": "Belege", "gaps": "Lücken", "fixes": "Nächste Schritte",
-        "verified": "verifiziert", "unverified": "NICHT verifiziert", "adj": "Punkte-Korrekturen", "skeptic": "Urteil des Skeptikers",
+        "verified": "verifiziert", "unverified": "NICHT verifiziert", "missing": "Datei existiert nicht", "adj": "Punkte-Korrekturen", "skeptic": "Urteil des Skeptikers",
         "checks": "Automatische Prüfungen", "risks": "Größte Risiken", "created": "Erstellte Dateien (freigegeben)",
         "diag": "Lauf-Diagnose", "stage": "Schritt", "secs": "Sekunden", "calls": "LLM-Aufrufe", "tokens": "Tokens ein/aus",
         "yes": "ja", "no": "nein", "readme": "README", "setup": "Setup-Anleitung", "runi": "Start-Anleitung",
@@ -70,7 +70,7 @@ def to_markdown(r: JudgeResult, lang: str = "en") -> str:
         if cs.evidence:
             out.append(f"**{t['evidence']}:**")
             for e, ok in zip(cs.evidence, flags or [False] * len(cs.evidence)):
-                mark = f"✅ {t['verified']}" if ok else f"❌ {t['unverified']}"
+                mark = f"✅ {t['verified']}" if ok else (f"❌ {t['unverified']}" if e.path in r.existing else f"🚫 {t['missing']}")
                 q = f' — "{e.quote[:140]}"' if e.quote else ""
                 out.append(f"- `{e.path}`{q} ({mark})")
         if cs.gaps:
@@ -105,7 +105,7 @@ def to_html(r: JudgeResult, lang: str = "en") -> str:
         flags = r.verified.get(cs.criterion, [])
         ev = "".join(
             f"<li><code>{e(x.path)}</code> {('— “' + e(x.quote[:140]) + '”') if x.quote else ''} "
-            f"<span class='{'ok' if ok else 'bad'}'>{t['verified'] if ok else t['unverified']}</span></li>"
+            f"<span class='{'ok' if ok else 'bad'}'>{t['verified'] if ok else (t['unverified'] if x.path in r.existing else t['missing'])}</span></li>"
             for x, ok in zip(cs.evidence, flags or [False] * len(cs.evidence))
         )
         gaps = "".join(f"<li>{e(g)}</li>" for g in cs.gaps)
