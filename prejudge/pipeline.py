@@ -33,8 +33,11 @@ You score ONE project against the organizer's rubric before the team submits.
 Rules:
 - Inspect the project with the tools first (submission_scan, repo_tree, read_file, search_repo).
 - Score every rubric criterion 0-10. Use the EXACT criterion names you are given.
-- Every score above 5 needs evidence: a repo-relative path plus a short verbatim quote from that file.
-  Quotes are machine-verified; invented quotes lower the score.
+- Every score above 5 needs evidence: a repo-relative path plus a short verbatim quote (one line) from that file.
+  Copy the text only, WITHOUT the "12: " line number that read_file shows. Quotes are machine-verified;
+  invented quotes lower the score.
+- Before scoring, open every markdown file whose name or headings match a checklist item
+  (e.g. BUILDING_BLOCKS.md, WHAT_WE_LEARNED.md, docs/*) and judge what is actually in it.
 - gaps = what a judge would miss; fixes = concrete, small next actions (file + what to add).
 - Never reward claims that are only promised ("coming soon", TODO).
 - Write project_summary, gaps, fixes and top_risks in {lang}.
@@ -47,6 +50,10 @@ Only challenge when you have a concrete reason. Write reasons in {lang}.
 verdict must be one of: agree, too_generous, too_harsh. Return only JSON."""
 
 FIXER_INSTRUCTIONS = """You help a hackathon team close submission gaps by creating MISSING documents only.
+Create at most 3 files, only for checklist items that have no file or README section yet.
+Put them in the project root with clear names (e.g. BUILDING_BLOCKS.md, WHAT_WE_LEARNED.md).
+Never create a document about secrets or keys (those must be deleted, not documented) and never
+a separate file for a video link (it belongs in the README).
 Use create_doc for each missing file (one call per file). Content must be an honest skeleton:
 headings from the organizer's checklist, facts you can verify in the repo, and clear TODO markers
 for anything the team must fill in (results, video link, findings). Never invent results.
@@ -257,7 +264,7 @@ def run(
 
     if fix:
         log("[3/3] fixer drafts missing docs (each file needs your approval)")
-        gaps = [g for cs in card.criteria for g in cs.gaps] + [f"secret: {s}" for s in scan["possible_secrets"]]
+        gaps = [g for cs in card.criteria for g in cs.gaps]
         with Agent(
             name="prejudge-fixer",
             config_path=config_path,

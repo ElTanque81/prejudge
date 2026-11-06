@@ -73,6 +73,15 @@ def test_evidence_gate_caps_unverified_high_scores(project):
     assert [a.criterion for a in adj] == ["B"]
 
 
+def test_quote_verification_tolerates_copied_prefixes(project):
+    ws = Workspace(project)
+    assert ws.verify_quote("README.md", "14: python agent.py notes.txt")
+    assert ws.verify_quote("README.md:14", "`python agent.py notes.txt`")
+    assert ws.verify_quote("README.md", "# Summarizer Agent\nSummarizes a text file ... OpenMinion SDK.")
+    assert not ws.verify_quote("README.md", "This project uses Cortensor Portal for inference")
+    assert not ws.verify_quote("README.md", "a")
+
+
 def test_skeptic_meets_halfway_rounding_toward_skeptic():
     card = Scorecard(project_summary="x", criteria=[CriterionScore(criterion="A", score=7), CriterionScore(criterion="B", score=3)])
     review = SkepticReview(verdict="too_generous", challenges=[

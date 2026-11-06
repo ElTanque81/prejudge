@@ -97,9 +97,14 @@ class Workspace:
         }
 
     def verify_quote(self, rel: str, quote: str) -> bool:
-        """True when the file exists and (if given) the quote appears in it, whitespace-insensitive."""
+        """True when the file exists and the quote appears in it.
+
+        Tolerates what models typically add when copying from read_file / search_repo:
+        "12: " line-number prefixes, "path:12:" prefixes, surrounding quotes or backticks,
+        "..." elisions and multi-line quotes (enough of the lines must match).
+        """
         try:
-            p = self.resolve(rel)
+            p = self.resolve(rel.split(":")[0])
         except PermissionError:
             return False
         if not p.is_file():
@@ -107,7 +112,19 @@ class Workspace:
         if not quote.strip():
             return True
         norm = lambda s: re.sub(r"\s+", " ", s).strip().lower()
-        return norm(quote)[:200] in norm(self.read(p))
+        text = norm(self.read(p))
+        lines = []
+        for ln in quote.splitlines():
+            ln = re.sub(r"^\s*(?:[\w./-]+:)?\d+:\s?", "", ln)
+            ln = ln.strip().strip("`\"'“”‘’").strip()
+            if ln:
+                lines.append(ln)
+        fragments = [norm(f) for ln in lines for f in re.split(r"\.\.\.|…", ln)]
+        fragments = [f for f in fragments if len(f) >= 6]
+        if not fragments:
+            return False
+        hits = sum(1 for f in fragments if f[:200] in text)
+        return hits == len(fragments) if len(fragments) <= 2 else hits >= (len(fragments) + 1) // 2
 
 
 def make_read_tools(ws: Workspace) -> list:
