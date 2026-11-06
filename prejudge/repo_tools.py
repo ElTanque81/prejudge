@@ -206,6 +206,22 @@ def make_read_tools(ws: Workspace) -> list:
     return [repo_tree, read_file, search_repo, submission_scan]
 
 
+MAX_CREATED = 3
+
+
+def guard_create(ws: Workspace, written: list[str], args: dict) -> str | None:
+    """Return a reason to deny a create_doc call before asking the human, or None."""
+    try:
+        p = ws.resolve(str(args.get("path", "")))
+    except PermissionError:
+        return "path escapes the project"
+    if p.exists() or ws.rel(p) in written:
+        return f"{ws.rel(p)} already exists"
+    if len(written) >= MAX_CREATED:
+        return f"limit of {MAX_CREATED} new files reached"
+    return None
+
+
 def make_write_tool(ws: Workspace, written: list[str]) -> list:
     """One create-only write tool. Non-idempotent write scope => OpenMinion asks for approval on every call."""
 
@@ -215,8 +231,9 @@ def make_write_tool(ws: Workspace, written: list[str]) -> list:
         p = ws.resolve(path)
         if p.suffix.lower() not in {".md", ".txt"}:
             return "refused: only .md or .txt files may be created"
-        if p.exists():
-            return f"refused: {path} already exists"
+        reason = guard_create(ws, written, {"path": path})
+        if reason:
+            return f"refused: {reason}. Do not retry; finish with a short summary."
         if "\n" not in content and "\\n" in content:
             # Some models (seen with qwen2.5 via Ollama) double-escape newlines in tool arguments.
             content = content.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", "\t")

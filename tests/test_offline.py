@@ -96,6 +96,15 @@ def test_create_doc_unescapes_double_escaped_newlines(project):
     assert (project / "NOTES.md").read_text() == "# Title\n\n## Used\n"
 
 
+def test_guard_create_blocks_duplicates_and_limit(project):
+    from prejudge.repo_tools import guard_create
+    ws = Workspace(project)
+    assert "already exists" in guard_create(ws, [], {"path": "/README.md"})
+    assert guard_create(ws, [], {"path": "NEW.md"}) is None
+    assert "already exists" in guard_create(ws, ["NEW.md"], {"path": "/NEW.md"})
+    assert "limit" in guard_create(ws, ["a.md", "b.md", "c.md"], {"path": "d.md"})
+
+
 def test_skeptic_meets_halfway_rounding_toward_skeptic():
     card = Scorecard(project_summary="x", criteria=[CriterionScore(criterion="A", score=7), CriterionScore(criterion="B", score=3)])
     review = SkepticReview(verdict="too_generous", challenges=[

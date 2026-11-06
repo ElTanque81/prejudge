@@ -22,7 +22,7 @@ from typing import Callable
 from openminion import Agent, AgentOutputValidationError, subagent
 
 from .models import CriterionScore, Scorecard, SkepticReview
-from .repo_tools import Workspace, make_read_tools, make_write_tool
+from .repo_tools import Workspace, guard_create, make_read_tools, make_write_tool
 from .rules import Rules, weighted_total
 from . import history
 
@@ -289,7 +289,15 @@ def run(
                 + "\n\nExisting markdown headings:\n" + "\n".join(scan["markdown_headings"][:40])
             )
             t0 = time.monotonic()
-            fres = fixer.run(prompt, timeout_seconds=timeout, approval_callback=approve)
+            def gated(tool_name: str, args: dict, approval_id: str) -> bool:
+                # Duplicates and over-limit calls are denied without bothering the human.
+                reason = guard_create(ws, created, args) if tool_name == "create_doc" else None
+                if reason:
+                    log(f"  auto-denied {tool_name} {args.get('path')}: {reason}")
+                    return False
+                return approve(tool_name, args, approval_id) if approve else False
+
+            fres = fixer.run(prompt, timeout_seconds=timeout, approval_callback=gated)
             stages.append(StageStats("fixer", round(time.monotonic() - t0, 1), dict(fres.stats)))
 
     scores = {cs.criterion: cs.score for cs in card.criteria}

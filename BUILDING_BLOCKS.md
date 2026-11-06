@@ -62,3 +62,9 @@ inline (`Workspace.context_pack`), and the report labels citations of non-existe
 | Provider / model | Stage | Seconds | LLM calls | Tokens in/out | Notes |
 |---|---|---|---|---|---|
 | TODO (re-run after v0.1.1) | judge | | | | |
+
+**Fixer loop with qwen2.5 (Ollama):** after an approved `create_doc`, the fixer proposed the same file
+again with a fresh approval id, repeatedly. Consistent with finding A (instructions and plan context gone
+after the first tool step). Response in PreJudge: `guard_create` denies duplicates and anything past
+3 files inside the approval callback, before the human is asked. Same run: qwen2.5 sent tool arguments
+with double-escaped newlines (`\\n`); `create_doc` repairs them.
