@@ -116,6 +116,16 @@ exceeds it). Workaround: `OLLAMA_CONTEXT_LENGTH=12288` on the Ollama server.
 
 ---
 
+## I
+
+**Title:** [0.1.18] `ProviderError` drops the HTTP error body (`HTTP 421: HTTP 421`)
+
+OpenAI-compatible provider (Otari, EU key sent to global host). The body
+`{"detail":"This API key belongs to eu.api.otari.ai. Send the request there instead."}` is not shown by
+`openminion setup` / `doctor`. Expected: include a truncated, secret-free excerpt of the body.
+
+---
+
 ## C (context for #635 / #497 / #516)
 
 One judge turn with two tool calls produced 8 provider requests; only 3–4 were the agent loop. The rest

@@ -68,6 +68,11 @@ The runtime's own prompt is ~2.5k tokens before any user content, so almost any 
 Workaround: start Ollama with `OLLAMA_CONTEXT_LENGTH=12288` (or larger). Suggestion: expose
 `num_ctx` in the provider config and warn when the estimated prompt exceeds it.
 
+**I. Provider error bodies are dropped.** With an EU-region Otari key sent to the global host, OpenMinion
+reported only `HTTP 421: HTTP 421`. The response body said exactly what to do ("This API key belongs to
+eu.api.otari.ai. Send the request there instead."). Surfacing the first ~200 chars of the error body in
+`ProviderError` would have saved the debugging.
+
 **D. Default `@tool` needs confirmation (known, #464).** README quick start `lookup_order` has the same shape.
 
 ## Real-model runs
@@ -86,9 +91,20 @@ capped; without the gate the self-score would have been inflated by 8.5 points (
 Response in v0.1.1: the judge prompt now carries the real file list and the README plus checklist docs
 inline (`Workspace.context_pack`), and the report labels citations of non-existent files separately.
 
-| Provider / model | Stage | Seconds | LLM calls | Tokens in/out | Notes |
-|---|---|---|---|---|---|
-| TODO (re-run after v0.1.1) | judge | | | | |
+### Hosted run that worked: Otari (Mozilla.ai gateway, EU region) → `alibaba/qwen3-235b-a22b-instruct-2507`
+
+Configured as OpenMinion "Custom OpenAI-compatible endpoint", base URL `https://eu.api.otari.ai/api/v1`.
+
+| Run | Score | Evidence gate | Skeptic | Notes |
+|---|---|---|---|---|
+| Sample project, with fixer | 56.0 | 0 caps (all quotes verified) | 2 cuts (9→7 SDK usage, 8→7 functionality) | Fixer proposed 4 docs; 2 approved, 2 denied (separate video file, TODO-only example input) |
+| Sample project, 2nd run (`--no-skeptic`) | 48.5 | 0 caps | – | The two new docs are TODO skeletons and earned nothing: "promises don't count" works |
+| PreJudge on itself | 70.5 | 0 caps | 2 cuts (9→8, 8→7) | Main gap: no demo video link yet (Reproducibility 5/10) |
+
+Comparison: the same workflow on local Ollama models (llama3.1 8B, qwen2.5 7B/14B, 16 GB Mac mini)
+produced invented evidence, repeated-tool loops, freshness refusals and timeouts (findings E, F, H).
+Takeaway for builders: OpenMinion's runtime adds ~2.5k tokens of internal prompt and several internal
+calls per turn; on this hardware a hosted ~200B-class open model was needed for reliable typed output.
 
 **Fixer loop with qwen2.5 (Ollama):** after an approved `create_doc`, the fixer proposed the same file
 again with a fresh approval id, repeatedly. Consistent with finding A (instructions and plan context gone

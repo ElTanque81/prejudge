@@ -75,6 +75,11 @@ OLLAMA_CONTEXT_LENGTH=12288 ollama serve
 
 Tested with `qwen2.5:14b` on a 16 GB Mac mini.
 
+Using **Otari** (Mozilla.ai's OpenAI-compatible gateway; the demo run used it): choose
+`6` → `14` *Custom OpenAI-compatible endpoint*, base URL `https://api.otari.ai/api/v1`
+(EU keys: `https://eu.api.otari.ai/api/v1`), model e.g. `alibaba/qwen3-235b-a22b-instruct-2507`,
+and your Otari API key. If the test answers `HTTP 421`, your key belongs to the other region.
+
 Using **Cortensor Portal**: pick `cortensor-portal` in the wizard (credential `CORTENSOR_API_KEY`,
 endpoint `https://api.cortensor.app/v1`, recommended model `oss-20b`). Portal is slower than most hosted
 providers, so pass `--timeout 900`.
