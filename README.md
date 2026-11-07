@@ -147,7 +147,9 @@ The demo video uses a real model.
 
 ## Demo
 
-📹 Demo video (1–5 min): **TODO – add link**
+📹 Demo video (2:42): https://youtu.be/Eb5ZhGAkk0o
+
+The video replays the terminal output of a real run (Mac mini, Otari EU gateway, `alibaba/qwen3-235b-a22b-instruct-2507`, 7 Nov 2026) and the evidence-gate catches from the local llama3.1 run. Voice: Kokoro-82M (open weights).
 
 ## Limits
 
